@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#10182d" />
+  <title>Idle Realms</title>
+  <style>
+    :root { --ink:#edf4ff; --muted:#a9b8d5; --panel:#1a2745; --panel2:#24365d; --gold:#ffd369; --green:#6ce5a3; --red:#ff7084; --blue:#72b8ff; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body { margin:0; min-height:100vh; background:radial-gradient(circle at 50% -10%,#314c80 0,#10182d 46%,#090f20 100%); color:var(--ink); font:600 16px system-ui,-apple-system,Segoe UI,sans-serif; }
+    main { width:min(100%,500px); min-height:100vh; margin:auto; padding:calc(14px + env(safe-area-inset-top)) 16px calc(22px + env(safe-area-inset-bottom)); }
+    header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+    h1 { font-size:24px; margin:0; letter-spacing:.5px; } .sub { color:var(--muted); font-size:12px; margin-top:3px; }
+    .coins { color:var(--gold); font-size:18px; } .card { background:linear-gradient(145deg,var(--panel2),var(--panel)); border:1px solid #3a5080; border-radius:20px; box-shadow:0 10px 25px #060a1666; }
+    .battle { text-align:center; padding:16px; } .stage { color:var(--muted); font-size:13px; margin-bottom:8px; }
+    .enemy { font-size:70px; line-height:1; margin:7px 0; filter:drop-shadow(0 7px 4px #060a16); transition:transform .12s; } .enemy.hit { transform:scale(.89) rotate(-5deg); }
+    #enemyName { margin:2px 0 8px; font-size:20px; }.bar { height:13px; background:#0a1227; border-radius:10px; overflow:hidden; border:1px solid #425779; }.fill { height:100%; transition:width .2s; background:linear-gradient(90deg,#ff6c79,#ff9b72); }
+    .health { display:flex; justify-content:space-between; color:var(--muted); font-size:12px; margin:7px 2px 16px; }.attack { width:100%; min-height:68px; border:0; border-radius:16px; background:linear-gradient(135deg,#6bb7ff,#5d74e8); color:white; font-size:21px; font-weight:900; letter-spacing:.7px; box-shadow:0 6px 0 #354cbd; cursor:pointer; }.attack:active { transform:translateY(5px); box-shadow:0 1px 0 #354cbd; }
+    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin:14px 0; }.stat { padding:10px 6px; text-align:center; }.stat b { display:block; font-size:18px; color:var(--green); }.stat span { color:var(--muted); font-size:11px; }
+    .tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0; }.tab { background:#172442; color:var(--muted); border:1px solid #38527f; padding:12px; border-radius:12px; font:inherit; cursor:pointer; }.tab.active { background:#335685; color:white; border-color:#76b8ff; }
+    .shop { display:grid; gap:9px; }.upgrade { display:flex; align-items:center; gap:11px; padding:12px; }.icon { font-size:28px; width:36px; text-align:center; }.grow { flex:1; }.grow strong { display:block; font-size:15px; }.grow small { color:var(--muted); font-weight:500; }.buy { min-width:91px; border:0; border-radius:10px; padding:9px 6px; background:#f2ba4d; color:#382400; font-weight:900; cursor:pointer; }.buy:disabled { background:#58647a; color:#b8c2d5; }
+    .hidden { display:none; }.note { margin-top:14px; color:var(--muted); text-align:center; font-size:12px; font-weight:500; }.toast { position:fixed; left:50%; bottom:25px; transform:translate(-50%,20px); opacity:0; background:#17284b; border:1px solid #5c84c7; padding:10px 15px; border-radius:99px; transition:.25s; pointer-events:none; }.toast.show { opacity:1; transform:translate(-50%,0); }
+  </style>
+</head>
+<body><main>
+  <header><div><h1>⚔️ Idle Realms</h1><div class="sub">Your heroes fight while you are away</div></div><div class="coins">🪙 <span id="gold">0</span></div></header>
+  <section class="battle card"><div class="stage">STAGE <span id="stage">1</span></div><div class="enemy" id="enemy">👺</div><h2 id="enemyName">Forest Goblin</h2><div class="bar"><div class="fill" id="hpBar"></div></div><div class="health"><span>HP <span id="hp">0</span>/<span id="maxHp">0</span></span><span>Tap damage: <span id="tapDamage">1</span></span></div><button class="attack" id="attack">⚔ ATTACK</button></section>
+  <section class="stats"><div class="card stat"><b id="dps">0</b><span>damage / sec</span></div><div class="card stat"><b id="kills">0</b><span>defeated</span></div><div class="card stat"><b id="best">1</b><span>best stage</span></div></section>
+  <div class="tabs"><button class="tab active" data-tab="heroes">HEROES</button><button class="tab" data-tab="upgrades">UPGRADES</button></div>
+  <section class="shop" id="heroes"></section><section class="shop hidden" id="upgrades"></section>
+  <p class="note">Progress is saved on this device. Come back later to collect idle gold!</p><div class="toast" id="toast"></div>
+</main>
+<script>
+const enemies=[['👺','Forest Goblin'],['🐺','Moon Wolf'],['🧙','Rogue Mage'],['🐲','Cave Drake'],['👹','Ash Demon']];
+let state=JSON.parse(localStorage.getItem('idleRealms')||'null')||{gold:0,stage:1,kills:0,tap:1,heroes:[0,0,0],last:Date.now()};
+const heroData=[['🗡️','Squire',2,1],['🏹','Ranger',18,5],['🧙‍♀️','Mage',140,24]], upgradeData=[['💥','Sharpened Blade','Tap damage +1',20],['✨','Power Strike','Double tap damage',125]];
+const $=id=>document.getElementById(id), fmt=n=>Math.floor(n).toLocaleString();
+function enemyHp(){return Math.floor(10*Math.pow(1.27,state.stage-1)+5)} function dps(){return state.heroes.reduce((sum,n,i)=>sum+n*heroData[i][3],0)}
+let hp=enemyHp();
+function save(){state.last=Date.now();localStorage.setItem('idleRealms',JSON.stringify(state))}
+function toast(t){$('toast').textContent=t;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2200)}
+function render(){const e=enemies[(state.stage-1)%enemies.length], max=enemyHp(); $('gold').textContent=fmt(state.gold);$('stage').textContent=state.stage;$('enemy').textContent=e[0];$('enemyName').textContent=e[1];$('hp').textContent=Math.max(0,Math.ceil(hp));$('maxHp').textContent=max;$('hpBar').style.width=Math.max(0,hp/max*100)+'%';$('tapDamage').textContent=state.tap;$('dps').textContent=fmt(dps());$('kills').textContent=fmt(state.kills);$('best').textContent=state.stage;
+ $('heroes').innerHTML=heroData.map((h,i)=>{let cost=Math.floor(h[2]*Math.pow(1.17,state.heroes[i]));return `<div class="upgrade card"><div class="icon">${h[0]}</div><div class="grow"><strong>${h[1]} <small>Lv. ${state.heroes[i]}</small></strong><small>+${h[3]} damage / sec</small></div><button class="buy" onclick="buyHero(${i})" ${state.gold<cost?'disabled':''}>🪙 ${fmt(cost)}</button></div>`}).join('');
+ $('upgrades').innerHTML=upgradeData.map((u,i)=>{let owned=i===0?state.tap>1:state.tap>2;return `<div class="upgrade card"><div class="icon">${u[0]}</div><div class="grow"><strong>${u[1]}</strong><small>${owned?'Purchased':u[2]}</small></div><button class="buy" onclick="buyUpgrade(${i})" ${owned||state.gold<u[3]?'disabled':''}>${owned?'OWNED':'🪙 '+u[3]}</button></div>`}).join('');}
+function hit(amount){hp-=amount;$('enemy').classList.remove('hit');void $('enemy').offsetWidth;$('enemy').classList.add('hit');if(hp<=0){let reward=Math.floor(4*Math.pow(1.22,state.stage-1));state.gold+=reward;state.kills++;state.stage++;hp=enemyHp();toast(`Victory! +${reward} gold`)}save();render()}
+window.buyHero=i=>{let cost=Math.floor(heroData[i][2]*Math.pow(1.17,state.heroes[i]));if(state.gold>=cost){state.gold-=cost;state.heroes[i]++;save();render()}};
+window.buyUpgrade=i=>{let cost=upgradeData[i][3],owned=i===0?state.tap>1:state.tap>2;if(state.gold>=cost&&!owned){state.gold-=cost;state.tap=i===0?state.tap+1:state.tap*2;save();render()}};
+$('attack').onclick=()=>hit(state.tap);document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('heroes').classList.toggle('hidden',b.dataset.tab!=='heroes');$('upgrades').classList.toggle('hidden',b.dataset.tab!=='upgrades')});
+let elapsed=Math.min((Date.now()-state.last)/1000,14400), idle=Math.floor(dps()*elapsed);if(idle){state.gold+=idle;toast(`Welcome back! +${idle} idle gold`)}render();setInterval(()=>{if(dps())hit(dps());},1000);setInterval(save,5000);
+</script></body></html>
